@@ -45,7 +45,7 @@ app.get("/pes/*", (req, res) => {
         // The pre.highlight.shell CSS selector matches all `pre` elements
         // that have both the `highlight` and `shell` class
         let result = []
-        if(isVersionPage) {
+        if (isVersionPage) {
             const urlElems = $(req.path === "/pes/pes-2020/" ? '.team-block' : '.leagues-list a')
             console.log("isVersionPage", isVersionPage)
             // We now loop through all the elements found
@@ -59,8 +59,79 @@ app.get("/pes/*", (req, res) => {
         } else if (isRoot) {
             console.log("isRoot", isRoot)
         } else if (isPlayer) {
-            console.log("isPlayer", isPlayer)
-        }  else if (isLeag) {
+            result = {}
+            let playerCard = $(".top-container")
+            result.overview = $(playerCard).find('.player-card-ovr').text().match(/.{1,2}/g)[0]
+            result.name = $(playerCard).find('.player-card-name').text()
+            result.position = $(playerCard).find('.player-card-position').text()
+            result.teamlogo = $(playerCard).find('.player-card-teamlogo').attr("src")
+            result.image = $(playerCard).find('.player-card-image').attr("src")
+            let topInfo = $(".top-info")
+            result.description = $(topInfo).find('.description').text()
+            let teams = $(topInfo).find("div > a")
+            result.actualTeam = {
+                name: $(teams[0]).text(),
+                url: $(teams[0]).attr("href")
+            }
+            if (teams[1]) {
+                result.nationalTeam = {
+                    name: $(teams[1]).text(),
+                    url: $(teams[1]).attr("href")
+                }
+            }
+
+           let statsBlock = $('.stats-block')
+
+            let stats = []
+           for (let i = 0; i < statsBlock.length; i++) {
+                let statBlock = $(statsBlock[i])
+                let mainStateArray = statBlock.find('h4').text().split(/([0-9]+)/)
+                //console.log("main", mainStateArray)
+                let currentState= {}
+                currentState.main = {
+                    label: mainStateArray[2],
+                    value: mainStateArray[1]
+                }
+               currentState.details = []
+
+               const uu = statBlock.find('tbody').children()
+               for (let i = 0; i < uu.length; i++) {
+                   let detailsStateArray = $(uu[i]).find('td').text().split(/([0-9]+)/)
+                   currentState.details.push({
+                       label: detailsStateArray[2],
+                       value: detailsStateArray[1]
+                   })
+               }
+                stats.push(currentState)
+            }
+            result.state=stats
+
+
+            let playerInfo = []
+            let playerInfoBlock = $('.player-info').find('tbody').children()
+            for (let i = 0; i < playerInfoBlock.length; i++) {
+                const infoRow = $(playerInfoBlock[i]).children()
+                playerInfo.push({
+                    label: $(infoRow[0]).text(),
+                    value: $(infoRow[1]).text()
+                })
+            }
+            result.playerInfo = playerInfo
+
+            let playerPosition = []
+            let playerPositionBlock = $('.player-positions-item')
+            for (let i = 0; i < playerPositionBlock.length; i++) {
+                const positionRow = $(playerPositionBlock[i]).children()
+                console.log("player position", $(positionRow[0]).text())
+                playerPosition.push({
+                    label: $(positionRow[0]).text(),
+                    value: $(positionRow[1]).text()
+                })
+            }
+            result.positions = playerPosition
+
+
+        } else if (isLeag) {
             const urlElems = $(".team-table")
             const uu = $(urlElems).find('tbody').children()
             for (let i = 0; i < uu.length; i++) {
@@ -73,7 +144,52 @@ app.get("/pes/*", (req, res) => {
             }
 
         } else if (isTeam) {
+            result = {}
             console.log("isTeam", isTeam)
+            const urlElems = $(".squad-table")
+            const uu = $(urlElems).find('tbody').children()
+            let players = []
+            for (let i = 0; i < uu.length; i++) {
+                players.push({
+                    image: $(uu[i]).find('img').attr('src'),
+                    url: $(uu[i]).find('a').attr('href'),
+                    name: $(uu[i]).find('a').text(),
+                    countryFlag: $(uu[i]).find('.country-flag').attr('src'),
+                    num: $(uu[i]).find('.squad-table-num').text(),
+                    age: $(uu[i]).find('.squad-table-age').text(),
+                    height: $(uu[i]).find('.squad-table-height').text(),
+                    pos: $(uu[i]).find('.squad-table-pos').text(),
+                    stat: $(uu[i]).find('.squad-table-stat-col').text().match(/.{1,2}/g)[0],
+                })
+            }
+            let lignUp = []
+            const lignUpContainer = $(".game-plan-container")
+            const lignupItems = $(lignUpContainer).find('.gp-player')
+            for (let i = 0; i < lignupItems.length; i++) {
+                const str = $(lignupItems[i]).attr('style')
+                let position = {}
+                if (str) {
+                    const temp = str.split(" ")
+                    position = {
+                        top: temp[1],
+                        left: temp[3]
+                    }
+                } else {
+                    position = {
+                        bottom: "1%",
+                        left: "40%"
+                    }
+                }
+                lignUp.push({
+                    position: position,
+                    image: $(lignupItems[i]).find('img').attr('src'),
+                    url: $(lignupItems[i]).find('a').attr('href'),
+                    name: $(lignupItems[i]).find('.gp-playername > div').text(),
+                })
+            }
+
+            result.players = players
+            result.lignUp = lignUp
         }
         res.send({result})
     }).catch(error => {
